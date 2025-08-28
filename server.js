@@ -1,5 +1,6 @@
 const express = require("express");
-const { generatePDF } = require("./generatePDF");
+const { generatePDF } = require("./common_functions/generatePDF");
+const { sendEmailFunction } = require("./common_functions/sendEmail");
 require("dotenv").config();
 
 const app = express();
@@ -12,17 +13,45 @@ app.use("/generate-pdf", async (req, res) => {
   try {
     const input = req.body;
     console.log(">>>> the value of the INPUT is : ", input);
-    const { pdfValues } = input;
+    const { pdfValues, otherData } = input;
     console.log(">>>> the value of the pdfValues is : ", pdfValues);
 
     const pdfData = await generatePDF(pdfValues);
     console.log(">>>> the value of the PDF DATA is : ", pdfData);
 
-    return res
-      .status(200)
-      .json({ message: "Pdf generated successfully.", data: pdfData });
+    const { recipient, subject, html, isAttachment, mobile_number } = otherData;
+
+    let isEmailSentSuccessfully = false;
+
+    try {
+      const sendEmail = await sendEmailFunction(
+        recipient,
+        subject, // Subject
+        html,
+        isAttachment, // isAttachment = true
+        [pdfData] // attachments
+      );
+
+      console.log(">>>>>> the value of the SEND EMAIL is : ", sendEmail);
+
+      // assume sendEmailFunction returns { success: true/false } or something similar
+      if (sendEmail && sendEmail.success) {
+        isEmailSentSuccessfully = true;
+      }
+    } catch (emailError) {
+      console.log(">>>>> Error while sending email:", emailError);
+      isEmailSentSuccessfully = false;
+    }
+
+    return res.status(200).json({
+      message: "Pdf generated successfully.",
+      isEmailSentSuccessfully,
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.log(">>>>> the error in the GENERATE pdf api is : ", error);
+    return res
+      .status(500)
+      .json({ message: error.message, isEmailSentSuccessfully: false });
   }
 });
 
