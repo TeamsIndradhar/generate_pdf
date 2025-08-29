@@ -4,9 +4,11 @@ const { sendEmailFunction } = require("./common_functions/sendEmail");
 require("dotenv").config();
 
 const app = express();
+const cors = require("cors");
 
 const PORT = process.env.PORT || 8090;
 
+app.use(cors());
 app.use(express.json());
 
 app.use("/generate-pdf", async (req, res) => {
